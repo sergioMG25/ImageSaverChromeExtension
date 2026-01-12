@@ -1,0 +1,56 @@
+/* Botón de descarga Image Saver Pro */
+.image-saver-btn {
+  position: absolute;
+  z-index: 2147483647; /* Máximo z-index posible */
+  width: 40px;
+  height: 40px;
+  background-color: rgba(15, 23, 42, 0.95);
+  border-radius: 50%;
+  display: none; /* Controlado via JS */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s, background-color 0.2s, opacity 0.2s;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  pointer-events: auto; /* Asegurar que reciba clics */
+}
+
+/* IMPORTANTE: Asegurar que el botón esté encima de todo en Facebook/Instagram */
+div:has(> .image-saver-btn) {
+    z-index: 2147483647 !important;
+}
+
+.image-saver-btn:hover {
+  transform: scale(1.15);
+  background-color: #0ea5e9; /* Sky 500 */
+  border-color: #fff;
+}
+
+.image-saver-btn svg {
+  color: white;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+
+@keyframes fileBounce {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+  100% { transform: translateY(0); }
+}
+
+.image-saver-btn:hover svg {
+    animation: fileBounce 1s infinite;
+}
+
+.image-saver-btn.show {
+  display: flex !important;
+  opacity: 1;
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
