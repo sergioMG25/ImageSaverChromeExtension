@@ -100,16 +100,9 @@ async function downloadImage(imageUrl) {
         reader.onloadend = async () => {
             const base64data = reader.result;
             
-            let filename = 'image.png';
-            try {
-                const urlPath = new URL(imageUrl).pathname;
-                const potentialName = urlPath.substring(urlPath.lastIndexOf('/') + 1);
-                if (potentialName && potentialName.length < 100) filename = potentialName;
-            } catch(e) {}
+            // Improved filename extraction
+            let filename = extractFilenameFromUrl(imageUrl, blob.type);
             
-            filename = filename.replace(/[<>:"/\\|?*]/g, '_');
-            if (!filename.includes('.')) filename += '.jpg';
-
             try {
                 await saveViaOffscreen(base64data, filename);
                 notify("Guardado Exitoso", `Imagen guardada: ${filename}`);
@@ -126,6 +119,75 @@ async function downloadImage(imageUrl) {
         console.error("Download failed", err);
         notify("Error al Descargar", err.message, true);
     }
+}
+
+/**
+ * Extracts a clean filename from URL or generates one based on content type
+ */
+function extractFilenameFromUrl(url, mimeType) {
+    let filename = 'image';
+    let extension = getExtensionFromMime(mimeType);
+    
+    try {
+        const urlObj = new URL(url);
+        const pathname = urlObj.pathname;
+        const potentialName = pathname.substring(pathname.lastIndexOf('/') + 1);
+        
+        // Decode URL-encoded characters
+        const decodedName = decodeURIComponent(potentialName);
+        
+        if (decodedName && decodedName.length > 0 && decodedName.length < 100) {
+            // Check if it has an extension
+            const lastDotIndex = decodedName.lastIndexOf('.');
+            if (lastDotIndex > 0) {
+                filename = decodedName.substring(0, lastDotIndex);
+                const urlExt = decodedName.substring(lastDotIndex + 1).toLowerCase();
+                // Use URL extension if valid, otherwise use mime-based extension
+                if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(urlExt)) {
+                    extension = urlExt;
+                }
+            } else {
+                filename = decodedName;
+            }
+        }
+        
+        // Check for query parameters that might contain filename (e.g., ?name=image.png)
+        if (filename === 'image') {
+            const nameParam = urlObj.searchParams.get('name') || urlObj.searchParams.get('filename');
+            if (nameParam) {
+                filename = nameParam.split('.')[0];
+                const ext = nameParam.split('.').pop();
+                if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext.toLowerCase())) {
+                    extension = ext.toLowerCase();
+                }
+            }
+        }
+    } catch(e) {
+        console.warn("Could not parse URL for filename", e);
+    }
+    
+    // Sanitize filename
+    filename = filename.replace(/[<>:"/\\|?*]/g, '_').trim();
+    if (filename.length === 0) filename = 'image';
+    
+    return `${filename}.${extension}`;
+}
+
+/**
+ * Gets file extension from MIME type
+ */
+function getExtensionFromMime(mimeType) {
+    const mimeToExt = {
+        'image/png': 'png',
+        'image/jpeg': 'jpg',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+        'image/svg+xml': 'svg',
+        'image/bmp': 'bmp',
+        'image/x-icon': 'ico',
+        'image/tiff': 'tiff'
+    };
+    return mimeToExt[mimeType] || 'jpg';
 }
 
 // Handle notification click to restore permission

@@ -166,9 +166,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             animateButton(btn);
         }
     } else if (request.action === "getAllImages") {
-        const images = Array.from(document.images)
-            .filter(img => img.src && img.width > 50 && img.height > 50) // Basic filtering
-            .map(img => img.src);
+        // Improved image detection with lazy load support and better filtering
+        const allImages = Array.from(document.images);
+        const images = [];
+        
+        for (const img of allImages) {
+            // Check for visible images with reasonable size
+            const rect = img.getBoundingClientRect();
+            const isVisible = rect.width > 50 && rect.height > 50;
+            
+            // Get actual source (handle lazy loading)
+            let src = img.src;
+            
+            // Check for data-src, data-lazy-src, or other common lazy load attributes
+            if (!src || img.complete === false) {
+                src = img.dataset.src || img.dataset.lazySrc || img.getAttribute('data-original') || img.currentSrc || img.src;
+            }
+            
+            if (src && isVisible) {
+                images.push(src);
+            }
+        }
         
         // Remove duplicates
         const uniqueImages = [...new Set(images)];
