@@ -1,94 +1,85 @@
 # Historias de Usuario - Image Saver Pro (v1.3)
 
 ## HU01 - Captura de Pantalla Completa
-
 **Como** usuario de la extensión,
-**Quiero** capturar una imagen de la pestaña visible actual mediante un botón en el popup o atajo de teclado,
+**Quiero** capturar la pantalla completa de la pestaña actual mediante el botón "Capturar Pantalla" en el popup o usando el atajo de teclado `Alt+Shift+C`,
 **Para** guardar una copia visual de la información que estoy consultando.
 
 **Criterios de Aceptación:**
-
-- El popup debe mostrar un botón "Capturar Pantalla".
-- Atajo de teclado: `Alt + Shift + C`.
-- La imagen debe guardarse en la carpeta seleccionada por el usuario.
-- Feedback visual durante el proceso de captura.
+- El popup muestra un botón "Capturar Pantalla".
+- El atajo de teclado `Alt+Shift+C` dispara la captura.
+- La captura se guarda mediante el offscreen document en la carpeta configurada.
+- Se muestra una notificación de éxito o error tras guardar.
 
 ## HU02 - Selección de Carpeta Nativa (File System Access)
-
 **Como** usuario avanzado,
-**Quiero** seleccionar cualquier carpeta de mi sistema operativo a través del explorador de archivos nativo,
-**Para** almacenar mis capturas donde yo quiera, sin estar restringido a la carpeta "Descargas".
+**Quiero** seleccionar cualquier carpeta del sistema a través del selector nativo, y que la extensión recuerde el acceso entre sesiones,
+**Para** almacenar mis capturas donde yo quiera sin estar limitado a "Descargas".
 
 **Criterios de Aceptación:**
-
-- El popup debe tener un botón "Seleccionar Carpeta..." que abra el diálogo nativo del SO.
-- La extensión debe recordar el acceso a la carpeta entre sesiones (persistencia en IndexedDB).
-- Chrome debe solicitar confirmación de permisos de escritura solo cuando sea necesario.
-- Si no hay carpeta seleccionada, se debe informar al usuario antes de intentar descargar.
-- **MEJORA v1.3**: Validación proactiva de permisos al iniciar, detectando permisos expirados.
+- El popup incluye un botón "Seleccionar Carpeta..." que abre el selector nativo (`showDirectoryPicker`).
+- La carpeta elegida se guarda en IndexedDB (`saveDirectoryHandle`).
+- Al abrir el popup se valida que el permiso de la carpeta sigue activo; si ha expirado se muestra un mensaje de error y se invita a volver a seleccionar.
+- La UI muestra `✓ Usando: <nombre>` cuando la carpeta está disponible.
 
 ## HU03 - Descarga vía Menú Contextual
-
 **Como** usuario navegando por la web,
-**Quiero** hacer clic derecho en una imagen y tener una opción para descargarla,
-**Para** guardar imágenes específicas rápidamente.
+**Quiero** hacer clic derecho sobre una imagen y elegir "Guardar imagen en carpeta configurada",
+**Para** descargar imágenes específicas rápidamente.
 
 **Criterios de Aceptación:**
+- Se crea una entrada `contextMenus` con id `save-image-to-folder` para `contexts: ['image']`.
+- Al seleccionar la opción, la extensión descarga la imagen usando `fetch`, la convierte a Blob y la guarda mediante offscreen.
+- Se respeta la carpeta configurada y se muestra notificación de éxito/error.
 
-- Opción "Guardar imagen en carpeta configurada" en menú contextual.
-- Descarga directa a la carpeta seleccionada en HU02.
-- **MEJORA v1.3**: Extracción inteligente de nombres de archivo desde URL y preservación del formato original (PNG, WebP, GIF, etc.).
-
-## HU04 - Botón Flotante Inteligente
-
+## HU04 - Botón Flotante Inteligente bajo el Cursor
 **Como** usuario de redes sociales (Instagram/Facebook),
-**Quiero** ver un botón de descarga superpuesto al pasar el mouse sobre una imagen,
-**Para** descargar imágenes difícilmente accesibles o protegidas por capas transparentes.
+**Quiero** que al pasar el cursor sobre una imagen aparezca un botón flotante para guardarla,
+**Para** descargar imágenes protegidas por capas transparentes.
 
 **Criterios de Aceptación:**
-
-- Botón visible en esquina inferior izquierda al hacer hover.
-- Detección avanzada a través de capas transparentes (`elementsFromPoint`).
-- Atajo de teclado: `Alt + Shift + S` para guardar la imagen bajo el cursor.
+- El comando `save-under-cursor` (atajo `Alt+Shift+S`) envía un mensaje al content script solicitando la imagen bajo el cursor (`getHoveredImage`).
+- El content script devuelve la URL de la imagen y la extensión la guarda usando la lógica de descarga.
 
 ## HU05 - Descarga Masiva (Bulk)
-
 **Como** usuario que investiga o colecciona imágenes,
-**Quiero** ver y descargar todas las imágenes de una página web a la vez,
-**Para** ahorrar tiempo evitando descargar una por una.
+**Quiero** abrir una interfaz que muestre todas las imágenes de la página y poder descargarlas en lote,
+**Para** ahorrar tiempo.
 
 **Criterios de Aceptación:**
+- El popup contiene un botón "Masiva" que abre `bulk.html` en una nueva pestaña.
+- `bulk.html` y `bulk.js` implementan una galería de imágenes detectadas, selección múltiple y descarga masiva a la carpeta configurada.
+- Se preservan los nombres y formatos originales de los archivos.
+- Se muestra un conteo de éxitos/fallos.
 
-- Botón "Masiva" en el popup que abre una nueva interfaz.
-- Galería con todas las imágenes detectadas en la pestaña activa.
-- Capacidad de seleccionar múltiples o todas las imágenes.
-- Botón para descargar la selección directamente a la carpeta configurada.
-- **MEJORA v1.3**: 
-  - Detección mejorada de imágenes lazy load (data-src, data-lazy-src, etc.)
-  - Extracción de nombres originales de archivos
-  - Conteo de éxitos/fallos en descargas masivas
-  - Preservación de formatos originales
-
-## HU06 - Manejo de Formatos de Imagen (NUEVO v1.3)
-
+## HU06 - Manejo de Formatos de Imagen
 **Como** usuario que trabaja con diversos tipos de imágenes,
-**Quiero** que las imágenes se guarden en su formato original,
-**Para** mantener la calidad y compatibilidad adecuadas.
+**Quiero** que las imágenes se guarden en su formato original (PNG, JPG, GIF, WebP, SVG, BMP, ICO, TIFF),
+**Para** mantener la calidad y compatibilidad.
 
 **Criterios de Aceptación:**
+- `extractFilenameFromUrl` determina la extensión a partir del MIME de la respuesta o de la URL.
+- `getExtensionFromMime` mapea los MIME a extensiones correctas.
+- Los nombres de archivo son sanitizados (caracteres ilegales reemplazados por `_`).
 
-- Detección automática del tipo MIME de la imagen
-- Asignación correcta de extensiones (png, jpg, gif, webp, svg, bmp, ico, tiff)
-- Nombres de archivo sanitizados sin caracteres inválidos
-
-## HU07 - Validación de Permisos (NUEVO v1.3)
-
+## HU07 - Validación y Recuperación de Permisos
 **Como** usuario,
-**Quiero** ser notificado si los permisos de carpeta han expirado,
-**Para** poder restaurarlos y continuar usando la extensión sin errores.
+**Quiero** ser notificado si los permisos de la carpeta han expirado y poder restaurarlos rápidamente,
+**Para** continuar usando la extensión sin errores.
 
 **Criterios de Aceptación:**
+- Al iniciar el popup se verifica `handle.queryPermission({mode:'readwrite'})`.
+- Si el permiso está perdido, se muestra un mensaje de error y se cambia el botón de selección para indicar la necesidad de re‑seleccionar.
+- La notificación de error incluye un botón que, al hacer clic, abre `popup.html` para que el usuario vuelva a otorgar permisos.
 
-- Verificación de permisos al abrir el popup
-- Mensaje claro indicando pérdida de permisos
-- Botón para re-seleccionar carpeta fácilmente
+## HU08 - Notificaciones de Estado
+**Como** usuario,
+**Quiero** recibir notificaciones claras de éxito, error o progreso de las operaciones,
+**Para** saber el resultado de cada acción.
+
+**Criterios de Aceptación:**
+- Función `notify(title, message, isError)` muestra notificaciones Chrome.
+- Los estados se reflejan también en el elemento `#status` del popup con estilos `success` o `error`.
+
+---
+*Todas las historias están alineadas con la lógica actual de `background.js`, `popup.js`, `content.js` y los archivos de UI.*
